@@ -1,0 +1,101 @@
+// index.js
+
+// 모듈 선언
+const express = require("express");
+const cookieParser = require("cookie-parser");
+const session = require("express-session");
+const path = require("path");
+
+// 환경 변수 선언
+require("dotenv").config();
+
+// 데이터베이스 생성
+const db = require("./db");
+
+// 상수 선언
+const { SERVER_ADDRESS, SERVER_PORT, SERVER_COOKIE_SECRET, SERVER_SESSION_SECRET } = process.env;
+
+// 서버 선언
+const app = express();
+
+// 서버 설정
+app.use(express.urlencoded({ extended: false }));
+app.use(express.json());
+app.use(cookieParser(SERVER_COOKIE_SECRET));
+app.use(session({
+    secure: true,
+    secret: SERVER_SESSION_SECRET,
+    resave: false,
+    saveUninitialized: true,
+    cookie: {
+        httpOnly: true,
+        secure: true
+    }
+}));
+app.use(express.static(path.join(__dirname, "static")));
+
+app.set("view engine", "ejs");
+app.set("views", path.join(__dirname, "views"));
+
+// 서버 콘솔 타이틀 출력
+const ASCII_ART_TITLE = "   _____                      _      _____  _____   _____ \n  / ____|                    | |    |  __ \\|  __ \\ / ____|\n | |     ___  _ __  ___  ___ | | ___| |__) | |__) | |  __ \n | |    / _ \\| '_ \\/ __|/ _ \\| |/ _ \\  _  /|  ___/| | |_ |\n | |___| (_) | | | \\__ \\ (_) | |  __/ | \\ \\| |    | |__| |\n  \\_____\\___/|_| |_|___/\\___/|_|\\___|_|  \\_\\_|     \\_____|\n";
+console.log(ASCII_ART_TITLE);
+
+// 서버 초기화
+const initServer = async () => {
+    // 데이터베이스 테이블 목록
+    const DATABASE_TABLE_LIST = (await db.execute(`SHOW TABLES;`))[0].map(row => Object.values(row)[0]);
+    
+    // 데이터베이스 생성 테이블 목록
+    const DATABASE_CREATE_TABLE_LIST = ["users_tb", "character_jobs_tb", "quest_status_tb", "item_types_tb", "skill_types_tb", "slot_tb", "quests_tb", "items_tb", "skills_tb", "monsters_tb", "characters_tb", "inventory_tb", "equipment_tb", "character_skills_tb", "character_quests_tb", "mails_tb"];
+
+    // 존재하지 않는 테이블 생성
+    const DATABASE_CREATE_TABLE_TASKS = DATABASE_CREATE_TABLE_LIST.map(async (name) => {
+        if(DATABASE_TABLE_LIST.includes(name))
+            console.log(`* ${name} table check completed.`);
+        else 
+            await createTable(name);
+    });
+
+    // 테이블 생성이 끝날 때까지 대기
+    await Promise.all(DATABASE_CREATE_TABLE_TASKS);
+
+    // 서버 라우터 설정
+    app.use("/", require("./router/index"));
+
+
+    // 서버 실행
+    app.listen(SERVER_PORT, SERVER_ADDRESS, () => {
+        console.log(`* Server is Running on http://${SERVER_ADDRESS}:${SERVER_PORT}`);
+    });
+};
+
+// 데이터베이스 테이블 생성
+const createTable = async (name) => {
+    // 데이터베이스 테이블 생성 쿼리
+    const QUERY_LIST = {
+        "users_tb": `CREATE TABLE IF NOT EXISTS users_tb ( id int(11) NOT NULL AUTO_INCREMENT, USERNAME text NOT NULL, PASSWORD_KEY text NOT NULL, PASSWORD_SALT text NOT NULL, EMAIL text NOT NULL, UUID text NOT NULL, CREATE_AT timestamp NOT NULL DEFAULT current_timestamp(), PRIMARY KEY (id) ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;`,
+        "character_jobs_tb": `CREATE TABLE IF NOT EXISTS character_jobs_tb ( id INT(11) NOT NULL AUTO_INCREMENT, NAME TEXT NOT NULL COLLATE 'utf8mb4_uca1400_ai_ci', DESCRIPTION TEXT NOT NULL COLLATE 'utf8mb4_uca1400_ai_ci', PRIMARY KEY (id) USING BTREE ) COLLATE='utf8mb4_uca1400_ai_ci' ENGINE=InnoDB;`,
+        "quest_status_tb": `CREATE TABLE IF NOT EXISTS quest_status_tb ( id INT(11) NOT NULL AUTO_INCREMENT, STATUS TEXT NOT NULL COLLATE 'utf8mb4_uca1400_ai_ci', PRIMARY KEY (id) USING BTREE ) COLLATE='utf8mb4_uca1400_ai_ci' ENGINE=InnoDB;`,
+        "item_types_tb": `CREATE TABLE IF NOT EXISTS item_types_tb ( id INT(11) NOT NULL AUTO_INCREMENT, TYPE TEXT NOT NULL COLLATE 'utf8mb4_uca1400_ai_ci', PRIMARY KEY (id) USING BTREE ) COLLATE='utf8mb4_uca1400_ai_ci' ENGINE=InnoDB;`,
+        "skill_types_tb": `CREATE TABLE IF NOT EXISTS skill_types_tb ( id INT(11) NOT NULL AUTO_INCREMENT, TYPE TEXT NOT NULL COLLATE 'utf8mb4_uca1400_ai_ci', PRIMARY KEY (id) USING BTREE ) COLLATE='utf8mb4_uca1400_ai_ci' ENGINE=InnoDB;`,
+        "slot_tb": `CREATE TABLE IF NOT EXISTS slot_tb ( id INT(11) NOT NULL AUTO_INCREMENT, SLOT TEXT NOT NULL COLLATE 'utf8mb4_uca1400_ai_ci', PRIMARY KEY (id) USING BTREE ) COLLATE='utf8mb4_uca1400_ai_ci' ENGINE=InnoDB;`,
+
+        "quests_tb": `CREATE TABLE IF NOT EXISTS quests_tb ( id INT(11) NOT NULL AUTO_INCREMENT, TITLE TEXT NOT NULL COLLATE 'utf8mb4_uca1400_ai_ci', DESCRIPTION TEXT NOT NULL COLLATE 'utf8mb4_uca1400_ai_ci', REWARD_EXP INT(11) NOT NULL, REWARD_GOLD INT(11) NOT NULL, REWARD_ITEM_LIST LONGTEXT NOT NULL COLLATE 'utf8mb4_bin', PRIMARY KEY (id) USING BTREE, CONSTRAINT REWARD_ITEM_LIST CHECK (json_valid(REWARD_ITEM_LIST)) ) COLLATE='utf8mb4_uca1400_ai_ci' ENGINE=InnoDB;`,
+        "items_tb": `CREATE TABLE IF NOT EXISTS items_tb ( id INT(11) NOT NULL AUTO_INCREMENT, NAME TEXT NOT NULL COLLATE 'utf8mb4_uca1400_ai_ci', TYPE INT(11) NOT NULL, DESCRIPTION TEXT NOT NULL COLLATE 'utf8mb4_uca1400_ai_ci', PRICE INT(11) NOT NULL, PRIMARY KEY (id) USING BTREE, INDEX ITEMS_TYPE_FK (TYPE) USING BTREE, CONSTRAINT ITEMS_TYPE_FK FOREIGN KEY (TYPE) REFERENCES item_types_tb (id) ON UPDATE NO ACTION ON DELETE NO ACTION ) COLLATE='utf8mb4_uca1400_ai_ci' ENGINE=InnoDB;`,
+        "skills_tb": `CREATE TABLE IF NOT EXISTS skills_tb (id INT(11) NOT NULL AUTO_INCREMENT,NAME TEXT NOT NULL COLLATE 'utf8mb4_uca1400_ai_ci',DESCRIPTION TEXT NOT NULL COLLATE 'utf8mb4_uca1400_ai_ci',TYPE INT(11) NOT NULL,POWER INT(11) NOT NULL,MANA_COST INT(11) NOT NULL,COOLDOWN INT(11) NOT NULL,REQUIRED_JOB INT(11) NOT NULL,REQUIRED_LEVEL INT(11) NOT NULL,PRIMARY KEY (id) USING BTREE,INDEX SKILLS_TYPE_FK (TYPE) USING BTREE,INDEX SKILLS_JOB_FK (REQUIRED_JOB) USING BTREE,CONSTRAINT SKILLS_JOB_FK FOREIGN KEY (REQUIRED_JOB) REFERENCES character_jobs_tb (id) ON UPDATE NO ACTION ON DELETE NO ACTION,CONSTRAINT SKILLS_TYPE_FK FOREIGN KEY (TYPE) REFERENCES skill_types_tb (id) ON UPDATE NO ACTION ON DELETE NO ACTION)COLLATE='utf8mb4_uca1400_ai_ci'ENGINE=InnoDB;`,
+        "monsters_tb": `CREATE TABLE IF NOT EXISTS monsters_tb ( id INT(11) NOT NULL AUTO_INCREMENT, NAME TEXT NOT NULL COLLATE 'utf8mb4_uca1400_ai_ci', LEVEL INT(11) NOT NULL, HP INT(11) NOT NULL, ATK INT(11) NOT NULL, DROP_GOLD INT(11) NOT NULL, DROP_EXP INT(11) NOT NULL, DROP_ITEM_LIST LONGTEXT NOT NULL COLLATE 'utf8mb4_bin', PRIMARY KEY (id) USING BTREE ) COLLATE='utf8mb4_uca1400_ai_ci' ENGINE=InnoDB;`,
+
+        "characters_tb": `CREATE TABLE IF NOT EXISTS characters_tb ( id INT(11) NOT NULL AUTO_INCREMENT, USER_ID INT(11) NOT NULL, NAME TEXT NOT NULL COLLATE 'utf8mb4_uca1400_ai_ci', LEVEL INT(11) NOT NULL, EXP INT(11) NOT NULL, JOB INT(11) NOT NULL, GOLD INT(11) NOT NULL, CREATE_AT TIMESTAMP NOT NULL DEFAULT current_timestamp(), PRIMARY KEY (id) USING BTREE, INDEX USER_FK (USER_ID) USING BTREE, INDEX JOB_FK (JOB) USING BTREE, CONSTRAINT CHARACTER_JOB_FK FOREIGN KEY (JOB) REFERENCES character_jobs_tb (id) ON UPDATE NO ACTION ON DELETE NO ACTION, CONSTRAINT CHARACTER_USER_FK FOREIGN KEY (USER_ID) REFERENCES users_tb (id) ON UPDATE NO ACTION ON DELETE NO ACTION ) COLLATE='utf8mb4_uca1400_ai_ci' ENGINE=InnoDB;`,
+        "inventory_tb": `CREATE TABLE IF NOT EXISTS inventory_tb ( id INT(11) NOT NULL AUTO_INCREMENT, CHARACTER_ID INT(11) NOT NULL, ITEM_ID INT(11) NOT NULL, QUANTITY INT(11) NOT NULL, PRIMARY KEY (id) USING BTREE, INDEX INVENTORY_CHARACTER_FK (CHARACTER_ID) USING BTREE, INDEX INVENTORY_ITEM_FK (ITEM_ID) USING BTREE, CONSTRAINT INVENTORY_CHARACTER_FK FOREIGN KEY (CHARACTER_ID) REFERENCES characters_tb (id) ON UPDATE NO ACTION ON DELETE NO ACTION, CONSTRAINT INVENTORY_ITEM_FK FOREIGN KEY (ITEM_ID) REFERENCES items_tb (id) ON UPDATE NO ACTION ON DELETE NO ACTION ) COLLATE='utf8mb4_uca1400_ai_ci' ENGINE=InnoDB;`,
+        "equipment_tb": `CREATE TABLE IF NOT EXISTS equipment_tb ( id INT(11) NOT NULL AUTO_INCREMENT, CHARACTER_ID INT(11) NOT NULL, SLOT INT(11) NOT NULL, ITEM_ID INT(11) NOT NULL, PRIMARY KEY (id) USING BTREE, INDEX EQUIPMENT_CHARACTER_FK (CHARACTER_ID) USING BTREE, INDEX EQUIPMENT_SLOT_FK (SLOT) USING BTREE, INDEX EQUIPMENT_ITEM_FK (ITEM_ID) USING BTREE, CONSTRAINT EQUIPMENT_CHARACTER_FK FOREIGN KEY (CHARACTER_ID) REFERENCES characters_tb (id) ON UPDATE NO ACTION ON DELETE NO ACTION, CONSTRAINT EQUIPMENT_ITEM_FK FOREIGN KEY (ITEM_ID) REFERENCES items_tb (id) ON UPDATE NO ACTION ON DELETE NO ACTION, CONSTRAINT EQUIPMENT_SLOT_FK FOREIGN KEY (SLOT) REFERENCES slot_tb (id) ON UPDATE NO ACTION ON DELETE NO ACTION ) COLLATE='utf8mb4_uca1400_ai_ci' ENGINE=InnoDB;`,
+        "character_skills_tb": `CREATE TABLE IF NOT EXISTS character_skills_tb ( id INT(11) NOT NULL AUTO_INCREMENT, SKILL_ID INT(11) NOT NULL, CHARACTER_ID INT(11) NOT NULL, LEVEL INT(11) NOT NULL, IS_EQUIPPED INT(11) NOT NULL, ACQUIRED_AT TIMESTAMP NOT NULL DEFAULT current_timestamp(), PRIMARY KEY (id) USING BTREE, INDEX CHARACTER_SKILLS_SKILL_FK (SKILL_ID) USING BTREE, INDEX CHARACTER_SKILLS_CHARACTER_FK (CHARACTER_ID) USING BTREE, CONSTRAINT CHARACTER_SKILLS_CHARACTER_FK FOREIGN KEY (CHARACTER_ID) REFERENCES characters_tb (id) ON UPDATE NO ACTION ON DELETE NO ACTION, CONSTRAINT CHARACTER_SKILLS_SKILL_FK FOREIGN KEY (SKILL_ID) REFERENCES skills_tb (id) ON UPDATE NO ACTION ON DELETE NO ACTION ) COLLATE='utf8mb4_uca1400_ai_ci' ENGINE=InnoDB;`,
+        "character_quests_tb": `CREATE TABLE IF NOT EXISTS character_quests_tb ( id INT(11) NOT NULL AUTO_INCREMENT, CHARACTER_ID INT(11) NOT NULL, QUEST_ID INT(11) NOT NULL, STATUS INT(11) NOT NULL, PRIMARY KEY (id) USING BTREE, INDEX CHARACTER_QUESTS_CHARACTER_FK (CHARACTER_ID) USING BTREE, INDEX CHARACTER_QUESTS_QUEST_FK (QUEST_ID) USING BTREE, INDEX CHARACTER_QUESTS_STATUS_FK (STATUS) USING BTREE, CONSTRAINT CHARACTER_QUESTS_CHARACTER_FK FOREIGN KEY (CHARACTER_ID) REFERENCES characters_tb (id) ON UPDATE NO ACTION ON DELETE NO ACTION, CONSTRAINT CHARACTER_QUESTS_QUEST_FK FOREIGN KEY (QUEST_ID) REFERENCES quests_tb (id) ON UPDATE NO ACTION ON DELETE NO ACTION, CONSTRAINT CHARACTER_QUESTS_STATUS_FK FOREIGN KEY (STATUS) REFERENCES quest_status_tb (id) ON UPDATE NO ACTION ON DELETE NO ACTION ) COLLATE='utf8mb4_uca1400_ai_ci' ENGINE=InnoDB;`,
+        "mails_tb": `CREATE TABLE IF NOT EXISTS mails_tb ( id INT(11) NOT NULL AUTO_INCREMENT, RECEIVER_USER_ID INT(11) NOT NULL, SENDER_USER_ID INT(11) NULL DEFAULT NULL, IS_SYSTEM INT(11) NULL DEFAULT NULL, SYSTEM_NAME TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_uca1400_ai_ci', TITLE TEXT NOT NULL COLLATE 'utf8mb4_uca1400_ai_ci', MESSAGE TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_uca1400_ai_ci', ATTACHED_ITEM_LIST LONGTEXT NULL DEFAULT NULL COLLATE 'utf8mb4_bin', ATTACHED_GOLD INT(11) NULL DEFAULT NULL, IS_READ INT(11) NOT NULL, IS_CLAIMED INT(11) NOT NULL, IS_DELETE INT(11) NOT NULL, SENT_AT TIMESTAMP NOT NULL DEFAULT current_timestamp(), EXPIRES_AT TIMESTAMP NOT NULL, PRIMARY KEY (id) USING BTREE, INDEX MAILS_RECEIVER_USER_FK (RECEIVER_USER_ID) USING BTREE, INDEX MAILS_SENDER_USER_FK (SENDER_USER_ID) USING BTREE, CONSTRAINT MAILS_RECEIVER_USER_FK FOREIGN KEY (RECEIVER_USER_ID) REFERENCES characters_tb (id) ON UPDATE NO ACTION ON DELETE NO ACTION, CONSTRAINT MAILS_SENDER_USER_FK FOREIGN KEY (SENDER_USER_ID) REFERENCES characters_tb (id) ON UPDATE NO ACTION ON DELETE NO ACTION ) COLLATE='utf8mb4_uca1400_ai_ci' ENGINE=InnoDB;`,
+    }
+
+    await db.execute(QUERY_LIST[name]);
+    console.log(`* ${name} table created successfuly.`);
+};
+
+initServer();

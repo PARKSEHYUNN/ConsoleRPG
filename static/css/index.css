@@ -1,0 +1,48 @@
+/* static/css/index.css */
+
+body {
+    background-color: #000;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+
+    width: 100vw;
+    height: 95vh;
+}
+
+.main-title {
+    color: #FFF;
+}
+
+.main-button-box {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+
+    width: 15vw;
+    height: 11vh;
+
+    margin-top: .5em;
+
+    border: 2px solid #FFF;
+}
+
+.main-button {
+    background-color: transparent;
+    border: none;
+    color: #FFF;
+    cursor: pointer;
+
+    width: 100%;
+    max-height: 1.5em;
+    min-height: 1.5em;
+    line-height: 1.5em;
+
+    margin-top: .25em;
+    margin-bottom: .25em;
+}
