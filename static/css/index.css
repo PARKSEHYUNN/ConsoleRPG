@@ -14,7 +14,7 @@ body {
     height: 95vh;
 }
 
-.main-title {
+.main-title, .main-sub-title, .login-title {
     color: #FFF;
 }
 
