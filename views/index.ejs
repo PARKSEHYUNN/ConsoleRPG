@@ -19,14 +19,23 @@
         <div class="main-title"></div>
         <div class="main-sub-title"></div>
         <div class="main-button-box">
-            <button class="main-button font" data-text="로그인">▸ 로그인 ◂</button>
-            <button class="main-button font" data-text="회원가입">회원가입</button>
-            <button class="main-button font" data-text="설정">설정</button>
+            <button class="main-button font" data-text="로그인" data-page="login"><p class="active">로그인</p></button>
+            <button class="main-button font" data-text="회원가입" data-page="register"><p>회원가입</p></button>
+            <button class="main-button font" data-text="설정" data-page="setting"><p>설정</p></button>
         </div>
     </div>
 
     <div class="container" id="login-container">
         <div class="login-title"></div>
+        <div class="login-sub-title"></div>
+        <div class="login-input-box">
+            <input placeholder="아이디" />
+            <input placeholder="비밀번호" />
+            <div class="login-form-box">
+                <button class="main-button font" data-text="설정" data-page="setting"><p>뒤로가기</p></button>
+                <button class="main-button font" data-text="설정" data-page="setting"><p>로그인</p></button>
+            </div>
+        </div>
     </div>
 </body>
 </html>

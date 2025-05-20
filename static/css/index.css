@@ -4,21 +4,30 @@ body {
     background-color: #000;
 }
 
+p {
+    margin: 0;
+}
+
+p.active {
+    background-color: #FFF;
+    color: #000;
+}
+
 .container {
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
 
-    width: 100vw;
+    width: 95vw;
     height: 95vh;
 }
 
-.main-title, .main-sub-title, .login-title {
+.main-title, .main-sub-title, .login-title, .login-sub-title {
     color: #FFF;
 }
 
-.main-button-box {
+.main-button-box, .login-input-box {
     display: flex;
     flex-direction: column;
     justify-content: center;
